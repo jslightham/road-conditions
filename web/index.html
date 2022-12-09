@@ -1,0 +1,213 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
+        integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin="" />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"
+        integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+        #map {
+            height: 65vh;
+            width: 100vw;
+        }
+    </style>
+</head>
+
+
+<body class="bg-dark">
+    <main role="main" class="container">
+        <div>
+            <br>
+            <div class="alert alert-success" id="successAlert" role="alert" style="display:none;">
+            </div>
+            <div class="alert alert-danger" id="errorAlert" role="alert" style="display:none;">
+            </div>
+        </div>
+        
+        <h1 class="mt-5 text-light">Ontario Road Conditions</h1>
+        <p class="lead text-muted">
+            Uses a Python script to automatically grab images from all of Ontario's public road condition cameras. Then,
+            uses a convolutional neural network to classify all of the road images and plots all of the data on a map.
+            Click on
+            a marker to see the status of a location, and the image.
+        </p>
+        <p class="lead text-muted">
+            Data for all locations is automatically regenerated every 6 hours (avoid spamming Ontario's servers with
+            requests). Clicking on a marker will regenerate that data if data is over an hour old (grab the image,
+            process it,
+            display it).
+        </p>
+    </main>
+    <div class="container">
+        <div class="page-header">
+            <h1 class="display-3 text-light"></h1>
+        </div>
+
+        <div class="d-flex justify-content-center">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <footer class="py-3 my-4">
+            <p class="text-center text-muted">
+                Created by <a href="https://jslightham.com">jslightham</a>, 2022.
+            </p>
+            <p class="text-center text-muted">
+                All road condition images used in this project are sourced from <a href="https://511on.ca/">https://511on.ca/</a> under the <a href="https://www.ontario.ca/page/open-government-licence-ontario">Open Government License - Ontario</a>. Map data is available under
+                the <a href="https://www.openstreetmap.org/copyright">Open Database License</a>. Marker images are sourced from <a href="https://github.com/pointhi/leaflet-color-markers">pointhi's</a> GitHub page.
+            </p>
+        </footer>
+    </div>
+
+    <div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="reportModalLabel">Report Incorrect Road Status</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Thank you for helping make the model more accurate! Please select the most appropriate category
+                        for this image.</p>
+                    <image src="http://localhost:8080/images/654.jpg" width="100%" id="modalImage"></image>
+                    <br />
+                    <br />
+                    <h6 id="modalPrediction">Prediced: Snow on Road</h6>
+                    <select class="form-select" aria-label="Default select example" id="modalFormSelect"> </select>
+                </div>
+                <div class="modal-footer" id="reportModalFooter">
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<script src="js/mapHelpers.js"></script>
+<script>
+    let cameras;
+    fetch("http://localhost:8080/cameras")
+        .then(async function (response) {
+            cameras = await response.json();
+
+            var map = L.map("map").setView([44.91844, -79.774711], 13);
+            L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                maxZoom: 19,
+                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            }).addTo(map);
+
+            cameras.cameras.forEach(async (camera) => {
+                await new Promise((resolve) => setTimeout(resolve, 100));
+
+                let icon = classificationToIcon(camera.classification);
+                let friendlyClassification = classificationToFancy(camera.classification);
+                
+
+                var marker = L.marker([camera.lat, camera.lng], { icon: icon }).addTo(map);
+                marker.bindPopup(
+                    "<h5 class='text-center'>" +
+                    friendlyClassification +
+                    "</h5> <image height='150' width='225' src='http://localhost:8080/images/" +
+                    camera.id +
+                    ".jpg' /> <br /> <br /> <div class='text-center'><button type='button' class='btn btn-danger btn-sm' onclick='openModal(" +
+                    camera.id +
+                    ',"' +
+                    camera.classification.toString() +
+                    "\")''>Report Incorrect Status</button></div></div>"
+                );
+            });
+        })
+        .catch(function (error) {
+            console.log("Error: " + error);
+            displayErrorAlert("Could not load the list of cameras. " + error)
+        });
+
+    function openModal(id, prediction) {
+        console.log(prediction);
+        console.log("Open modal for " + id);
+        let im = document.getElementById("modalImage");
+        im.src = "http://localhost:8080/images/" + id + ".jpg";
+
+        let modalPrediction = document.getElementById("modalPrediction");
+        modalPrediction.textContent = "Prediction: " + classificationToFancy(prediction);
+
+        let modalFooter = document.getElementById("reportModalFooter");
+        modalFooter.innerHTML = "<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>" +
+                    "<span class='btn btn-primary' onclick='reportIncorrectStatus(" + id + ")' id='reportIncorrectSubmit'>Submit</span>"
+
+        fetch("http://localhost:8080/classifications").then(async (res) => {
+            let classificationList = await res.json();
+
+            let select = document.getElementById("modalFormSelect");
+            select.innerHTML = "";
+            classificationList.classifications.forEach((c) => {
+                if (c != prediction) {
+                    let opt = document.createElement("option");
+                    opt.value = c;
+                    opt.innerHTML = classificationToFancy(c);
+                    select.appendChild(opt);
+                }
+            });
+        });
+
+        $("#reportModal").modal("show");
+    }
+
+    function reportIncorrectStatus(id) { 
+        status = document.getElementById("modalFormSelect").value;
+        let sendObject = { "id" : id.toString(), "status": status.toString() };
+        
+        document.getElementById("reportIncorrectSubmit").disabled = true;
+        fetch('http://localhost:8080/report', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            mode: 'cors',
+            cache: 'default',
+            body: JSON.stringify(sendObject)
+        }).then(response => {
+            if (response.status == 200) {
+                displaySuccessAlert("Sent incorrect classification report (" + response.status + ").");
+                $("#reportModal").modal("hide");
+                document.getElementById("reportIncorrectSubmit").disabled = false;
+            } else {
+                displayErrorAlert("Error processing classification report. Internal server error (" + response.status + ").");
+                $("#reportModal").modal("hide");
+                document.getElementById("reportIncorrectSubmit").disabled = false;
+            }
+        });
+    }
+
+    function displayErrorAlert(string) {
+        document.getElementById("errorAlert").innerHTML = "<strong>Error! </strong>" + string;
+        alertTimeout(document.getElementById("errorAlert"));
+    }
+
+    function displaySuccessAlert(string) {
+        document.getElementById("successAlert").innerHTML = "<strong>Success! </strong>" + string;
+        alertTimeout(document.getElementById("successAlert"));
+    }
+
+    function alertTimeout(alert) {
+        alert.style.display = "block";
+        setTimeout(() => { alert.style.display = "none"; }, 5000);
+    }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+    crossorigin="anonymous"></script>
+
+</html>

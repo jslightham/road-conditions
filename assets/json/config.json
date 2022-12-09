@@ -1,0 +1,16 @@
+{
+    "scrapePath": "C:/Users/sligh/Documents/Programming/ontario-road-conditions/assets/images/images",
+    "trainPath": "C:/Users/sligh/Documents/Programming/ontario-road-conditions/assets/images/training",
+    "testPath": "C:/Users/sligh/Documents/Programming/ontario-road-conditions/assets/images/testing",
+    "predictionPath": "C:/Users/sligh/Documents/Programming/ontario-road-conditions/assets/images/predict",
+    "modelPath": "C:/Users/sligh/Documents/Programming/ontario-road-conditions/assets/best_checkpoint.model",
+    "camerasJSONPath": "C:/Users/sligh/Documents/Programming/ontario-road-conditions/assets/json/cameras.json",
+    "reportsJSONPath": "C:/Users/sligh/Documents/Programming/ontario-road-conditions/assets/json/reports.json",
+    "trainScriptPath": "C:/Users/sligh/Documents/Programming/ontario-road-conditions/scripts/train.py",
+    "classifyScriptPath": "C:/Users/sligh/Documents/Programming/ontario-road-conditions/scripts/classify.py",
+    "sceapeScriptPath": "C:/Users/sligh/Documents/Programming/ontario-road-conditions/scripts/get-images.py",
+    "ontarioCameraAPI": "https://511on.ca/map/mapIcons/Cameras",
+    "ontarioCameraBaseURL": "https://511on.ca/map/Cctv/",
+    "trainImageWidth": "350",
+    "trainImageHeight": "350"
+}
