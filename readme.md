@@ -11,7 +11,7 @@ Classification is performed by the `scripts/classify.py` script. This script wil
 ### Image Scraping
 Images are scraped by the python file `scripts/get-images.py`, and stored in the `assets/images` directory as a JPEG image with the name `epochTime-lat-long.jpg`. The script waits two seconds between grabbing images to prevent being rate limited. The web server by default only runs image scraping twice daily.
 
-### Server
+## Server
 Written in NodeJS, using express. Controls all of the python scripts, and relays the information to the web interface through rest APIs. Currently, there is no database, instead relevant data is stored in json files in the `assets` folder. The server checks if the model needs to be retrained hourly, and calls for new images & re-classification twice per day.
 
 ## Web
